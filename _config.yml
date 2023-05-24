@@ -1,6 +1,6 @@
 lsi: false
 safe: true
-source: AnderGoiri.github.io
+source: /AnderGoiri.github.io
 incremental: false
 highlighter: rouge
 gist:

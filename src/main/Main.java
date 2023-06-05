@@ -7,13 +7,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.time.LocalDate;
-import java.time.Period;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 import classes.Animal;
+import classes.ListadoAuxiliar;
 import classes.Revision;
 import classes.Planta;
 import classes.SerVivo;
@@ -112,7 +111,7 @@ public class Main {
 
 				numSerVivo = Util.calculoFichero(file);
 
-				for (int i = 0; i < numSerVivo; i++) {
+				for (int i = 0; i < numSerVivo && !existe; i++) {
 					auxSerVivo = (SerVivo) ois.readObject(); // asi solo leo un objeto
 					existe = (auxSerVivo.getCod()).equals(auxCode) ? true : false;
 
@@ -251,8 +250,6 @@ public class Main {
 		boolean encontrado = false;
 		int numSeresVivos = 0;
 
-		List<Revision> revisiones = new ArrayList<>();
-
 		String auxIdentificador = Util.introducirCadena("Introduzca el código del ser vivo: ");
 
 		// Comprobar si existe el animal en el fichero
@@ -278,21 +275,12 @@ public class Main {
 				auxSerVivo.getDatos();
 
 				do {
-					// Introducir datos revision médica inicial
-					Revision revision = new Revision();
-					revision.setFechaRevision();
-					revision.setMotivo(Util.introducirCadena("Introduzca el motivo:"));
-					revision.setDetalle(Util.introducirCadena("Introduzca el detalle:"));
-
-					revisiones.add(revision);
-
-					((Animal) auxSerVivo).setRevisiones(revisiones);
+					((Animal) auxSerVivo).addRevision();
 
 					continuar = Util.esBoolean("¿Desea continuar? (S/N)");
 				} while (continuar);
 
 			}
-
 			ois.close();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -302,6 +290,49 @@ public class Main {
 			e.printStackTrace();
 		}
 
+		if (encontrado) {
+
+			File auxFile = new File("auxSeresVivos.obj");
+
+			try {
+				ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
+
+				ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(auxFile));
+
+				numSeresVivos = Util.calculoFichero(file);
+
+				for (int i = 0; i < numSeresVivos; i++) {
+
+					SerVivo serVivoLeido = (SerVivo) ois.readObject();
+
+					if (serVivoLeido.getIdParque().equals(auxSerVivo.getIdParque())) {
+						oos.writeObject(auxSerVivo);
+					} else {
+						oos.writeObject(serVivoLeido);
+					}
+				}
+				oos.close();
+				ois.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			}
+
+			if (file.delete()) {
+				System.out.println("El fichero se ha borrado");
+			} else {
+				System.out.println("No se ha podido borrar el fichero");
+			}
+
+			if (auxFile.renameTo(file)) {
+				System.out.println("El fichero se ha cambiado");
+			} else {
+				System.out.println("No se ha podido renombrar el fichero");
+			}
+
+		}
+
 	}
 
 	// ---3. ---
@@ -309,73 +340,102 @@ public class Main {
 		SerVivo auxSerVivo = null;
 		ArrayList<SerVivo> servivoList = new ArrayList<>();
 
-		FileInputStream fis;
-		ObjectInputStream ois;
+		servivoList = fileToArrayList(file);
 
-		try {
-			fis = new FileInputStream(file);
-			ois = new ObjectInputStream(fis);
-
-			servivoList = fileToArrayList(file);
-
-			Iterator<SerVivo> iterador = servivoList.iterator();
-			while (iterador.hasNext()) {
-				auxSerVivo = iterador.next();
-				auxSerVivo.getDatos();
-			}
-			ois.close();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
+		Iterator<SerVivo> iterador = servivoList.iterator();
+		while (iterador.hasNext()) {
+			auxSerVivo = iterador.next();
+			auxSerVivo.getDatos();
 		}
 
 	}
 
 	// ---4. ---
 	private static void mostrarAnimalconEdadyVacuna(File file) {
-		Animal auxAnimal = null;
-		ArrayList<SerVivo> animalesList = new ArrayList<>();
+		int tamanioFichero = 0;
 		int edadlimite = 0;
+		Animal auxAnimal = null;
+		ArrayList<ListadoAuxiliar> listAuxiliar = new ArrayList<>();
 
 		try {
 			ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
 
-			animalesList = fileToArrayList(file);
-
+			tamanioFichero = Util.calculoFichero(file);
 			edadlimite = Util.leerInt("Introduzca la edad máxima (en años) que ha de tener el animal: ");
 
-			Iterator<SerVivo> iterador = animalesList.iterator();
-			while (iterador.hasNext()) {
-				auxAnimal = (Animal) iterador.next();
-				if (calcularEdad(auxAnimal.getFechaNac()) < edadlimite && tieneVacuna(auxAnimal)) {
-					auxAnimal.getDatos();
-					System.out.println();
+			for (int i = 0; i < tamanioFichero; i++) {
+				auxAnimal = (Animal) ois.readObject();
+				if (auxAnimal.calcularEdad(auxAnimal.getFechaNac()) < edadlimite && auxAnimal.tieneVacuna(auxAnimal)) {
+					ListadoAuxiliar aux = new ListadoAuxiliar();
+					aux.setCodigoAnimal(auxAnimal.getIdParque());
+					aux.setEspecie(auxAnimal.getEspecie());
+					aux.setnRevisiones(auxAnimal.getRevisiones().size());
+					aux.setEdad(auxAnimal.calcularEdad(auxAnimal.getFechaNac()));
+					aux.setnVacunas(auxAnimal.cantidadVacunas(auxAnimal));
+
+					listAuxiliar.add(aux);
 				}
 			}
+
+			if (listAuxiliar.size() > 0) {
+				System.out.println("Cabeceras");
+				for (int i = 0; i < listAuxiliar.size(); i++) {
+					System.out.println(listAuxiliar.get(i).toString());
+				}
+			} else {
+				System.out.println("No se han encontrado animales vacunados que tengan una edad inferior a" + edadlimite
+						+ "año. ");
+			}
+
 			ois.close();
-		} catch (FileNotFoundException e) {
+		} catch (
+
+		FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		}
 
 	}
-	
-	private static int calcularEdad(LocalDate fechaNac) {
-	    LocalDate fechaActual = LocalDate.now();
-	    Period periodo = Period.between(fechaNac, fechaActual);
-	    return periodo.getYears();
-	}
-	
-	private static boolean tieneVacuna(Animal animal) {
-	    List<Revision> revisiones = animal.getRevisiones();
-	    for (Revision revision : revisiones) {
-	        if (revision.getMotivo().contains("vacuna")) {
-	            return true;
-	        }
-	    }
-	    return false;
-	}
-	
+
+	/*
+	 * private static void mostrarAnimalconEdadyVacuna(File file) { Animal auxAnimal
+	 * = null; ArrayList<SerVivo> animalesList = new ArrayList<>();
+	 * ArrayList<ListadoAuxiliar> listAuxiliar = new ArrayList<>(); int edadlimite =
+	 * 0;
+	 * 
+	 * // Alternativa
+	 * 
+	 * animalesList = fileToArrayList(file);
+	 * 
+	 * edadlimite = Util.
+	 * leerInt("Introduzca la edad máxima (en años) que ha de tener el animal: ");
+	 * 
+	 * Iterator<SerVivo> iterador = animalesList.iterator(); while
+	 * (iterador.hasNext()) { auxAnimal = (Animal) iterador.next(); if
+	 * (auxAnimal.calcularEdad(auxAnimal.getFechaNac()) < edadlimite &&
+	 * auxAnimal.tieneVacuna(auxAnimal)) { ListadoAuxiliar aux = new
+	 * ListadoAuxiliar();
+	 * 
+	 * // sacar la info necesaria del animal
+	 * aux.setCodigoAnimal(auxAnimal.getIdParque());
+	 * aux.setEspecie(auxAnimal.getEspecie());
+	 * aux.setnRevisiones(auxAnimal.getRevisiones().size());
+	 * aux.setEdad(auxAnimal.calcularEdad(auxAnimal.getFechaNac()));
+	 * aux.setnVacunas(auxAnimal.cantidadVacunas(auxAnimal));
+	 * 
+	 * // añadir a la lista listAuxiliar.add(aux);
+	 * 
+	 * } } if (listAuxiliar.size() > 0) { System.out.println("Cabeceras"); for (int
+	 * i = 0; i < listAuxiliar.size(); i++) {
+	 * System.out.println(listAuxiliar.get(i).toString()); } } else {
+	 * System.out.println(
+	 * "No se han encontrado animales vacunados que tengan una edad inferior a" +
+	 * edadlimite + "año. "); }
+	 * 
+	 * }
+	 */
+
 }

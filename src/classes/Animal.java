@@ -2,6 +2,9 @@ package classes;
 
 import java.time.LocalDate;
 import java.util.List;
+
+import utilidades.Util;
+
 import java.util.ArrayList;
 import java.time.Period;
 
@@ -16,7 +19,7 @@ public class Animal extends SerVivo {
 	private LocalDate fechaNac;
 	private float peso;
 	private List<Revision> revisiones = new ArrayList<Revision>();
-	
+
 	public Animal() {
 		super();
 	}
@@ -58,18 +61,48 @@ public class Animal extends SerVivo {
 	public void getDatos() {
 		super.getDatos();
 		System.out.println("Nombre: " + this.nombre);
-		System.out.println("Fecha de nacimiento: " + this.fechaNac);//formateador
+		System.out.println("Fecha de nacimiento: " + this.fechaNac);// formateador
 		System.out.println("Peso: " + this.peso);
 		System.out.println("Revisiones: ");
 		// Bucle for-each para printear todas las revisiones
-		for (Revision rev:revisiones) {
+		for (Revision rev : revisiones) {
 			System.out.println(rev);
 		}
 	}
 
-	//Una edad se calcula utilizando un método de Period
-	public Period getEdad() {
-		return Period.between(this.fechaNac, LocalDate.now());
+	public int calcularEdad(LocalDate fechaNac) {
+		LocalDate fechaActual = LocalDate.now();
+		Period periodo = Period.between(fechaNac, fechaActual);
+		return periodo.getYears();
 	}
 
+	public boolean tieneVacuna(Animal animal) {
+		List<Revision> revisiones = animal.getRevisiones();
+		for (Revision revision : revisiones) {
+			if (revision.getMotivo().contains("vacuna")) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public int cantidadVacunas(Animal animal) {
+		int cantidadVacunas = 0;
+		//List<Revision> revisiones = animal.getRevisiones();
+		for (Revision revision : revisiones) {
+			if (revision.getMotivo().contains("vacuna")) {
+				cantidadVacunas++;
+			}
+		}
+		return cantidadVacunas;
+	}
+	public void addRevision() {
+		Revision revision = new Revision();
+		revision.setFechaRevision();
+		revision.setMotivo(Util.introducirCadena("Introduzca el motivo: "));
+		revision.setDetalle(Util.introducirCadena("Introduzca el detalle: "));
+		
+		revisiones.add(revision);
+		
+	}
 }
